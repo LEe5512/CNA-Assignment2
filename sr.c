@@ -5,8 +5,8 @@
 #include "gbn.h"
 
 /* ******************************************************************
-   Go Back N protocol.  Adapted from J.F.Kurose
-   ALTERNATING BIT AND Go Back N protocol NETWORK EMULATOR: VERSION 1.2
+   Selective Repeat protocol.  Adapted from J.F.Kurose
+   ALTERNATING BIT AND GO-BACK-N NETWORK EMULATOR: VERSION 1.2
 
    Network properties:
    - one way network delay averages five time units (longer if there
@@ -19,7 +19,7 @@
    Modifications:
    - removed bidirectional GBN code and other code not used by prac.
    - fixed C style to adhere to current programming style
-   - added GBN implementation
+   - added Selective Repeat implementation
 **********************************************************************/
 
 #define RTT  16.0       /* round trip time.  MUST BE SET TO 16.0 when submitting assignment */
@@ -190,7 +190,7 @@ void A_timerinterrupt(void)
   int next_timeout_idx = -1;
 
   if (TRACE > 0)
-    printf("----A: timeout, resend packet %d\n", timer_seq);
+    printf("----A: time out,resend packets!\n");
 
   /* find the packet our timer is for and resend it */
   for (i = 0; i < windowcount; i++) {
@@ -279,7 +279,7 @@ void B_input(struct pkt packet)
     /* check if the packet is within the receive window range */
     if (offset < WINDOWSIZE) {
       if (TRACE > 0)
-        printf("----B: packet %d is correctly received\n", seqnum);
+        printf("----B: packet %d is correctly received, send ACK!\n", seqnum);
 
       /* store the packet */
       B_buffer[offset].packet = packet;
@@ -316,15 +316,12 @@ void B_input(struct pkt packet)
     /* compute checksum */
     sendpkt.checksum = ComputeChecksum(sendpkt);
 
-    if (TRACE > 0)
-      printf("----B: sending ACK %d\n", sendpkt.acknum);
-
     /* send the ACK packet */
     tolayer3(B, sendpkt);
   }
   else {
     if (TRACE > 0)
-      printf("----B: corrupted packet is received, do nothing!\n");
+      printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
   }
 }
 
@@ -357,4 +354,3 @@ void B_output(struct msg message)
 void B_timerinterrupt(void)
 {
 }
-
