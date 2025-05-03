@@ -151,6 +151,7 @@ void A_input(struct pkt packet)
       stoptimer(A);
 
       /* find the next unacknowledged packet */
+      next_timeout_idx = -1;
       for (i = 0; i < windowcount; i++) {
         int pos = (windowfirst + i) % WINDOWSIZE;
         if (!A_buffer[pos].acked) {
@@ -170,11 +171,6 @@ void A_input(struct pkt packet)
     while (windowcount > 0 && A_buffer[windowfirst].acked) {
       windowfirst = (windowfirst + 1) % WINDOWSIZE;
       windowcount--;
-    }
-
-    /* if the window is now empty, stop the timer */
-    if (windowcount == 0) {
-      stoptimer(A);
     }
   }
   else {
