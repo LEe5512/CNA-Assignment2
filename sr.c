@@ -24,8 +24,9 @@
 
 #define RTT  16.0       /* round trip time.  MUST BE SET TO 16.0 when submitting assignment */
 #define WINDOWSIZE 6    /* the maximum number of buffered unacked packet */
-#define SEQSPACE 7      /* the min sequence space for GBN must be at least windowsize + 1 */
+#define SEQSPACE 12      /* for sr.c we need 2*window_size as seqspace */
 #define NOTINUSE (-1)   /* used to fill header fields that are not being used */
+
 
 /* generic procedure to compute the checksum of a packet.  Used by both sender and receiver  
    the simulator will overwrite part of your packet with 'z's.  It will not overwrite your 
@@ -56,10 +57,15 @@ bool IsCorrupted(struct pkt packet)
 
 /********* Sender (A) variables and functions ************/
 
-static struct pkt buffer[WINDOWSIZE];  /* array for storing packets waiting for ACK */
+static struct {
+    struct pkt packet;  /* packet stored in the buffer */
+    int acked;          /* to define the packet is confirmed or not */
+} A_buffer[WINDOWSIZE]; /* send window buffer */
+
 static int windowfirst, windowlast;    /* array indexes of the first/last packet awaiting ACK */
 static int windowcount;                /* the number of packets currently awaiting an ACK */
 static int A_nextseqnum;               /* the next sequence number to be used by the sender */
+static int timer_seq;                  /* sequence number of the packet that is being timed */
 
 /* called from layer 5 (application layer), passed the message to be sent to other side */
 void A_output(struct msg message)
@@ -201,8 +207,13 @@ void A_init(void)
 
 /********* Receiver (B)  variables and procedures ************/
 
-static int expectedseqnum; /* the sequence number expected next by the receiver */
-static int B_nextseqnum;   /* the sequence number for the next packets sent by B */
+static struct {
+    struct pkt packet;   /* packet stored in the buffer */
+    int received;       /* whether the packet is received: 0=not received, 1=received */
+} B_buffer[WINDOWSIZE];   /* receive window buffer */
+
+static int B_windowfirst;            /* first sequence number in the receiver's window */
+static int B_nextseqnum;             /* the sequence number for the next packets sent by B */
 
 
 /* called from layer 3, when a packet arrives for layer 4 at B*/
