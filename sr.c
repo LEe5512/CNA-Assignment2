@@ -88,7 +88,9 @@ void A_output(struct msg message)
     /* put packet in window buffer */
     /* windowlast will always be 0 for alternating bit; but not for GoBackN */
     windowlast = (windowlast + 1) % WINDOWSIZE; 
-    buffer[windowlast] = sendpkt;
+    A_buffer[windowlast].packet = sendpkt;
+    A_buffer[windowlast].acked = 0;  /* mark as not acknowledged */
+
     windowcount++;
 
     /* send out packet */
@@ -97,8 +99,10 @@ void A_output(struct msg message)
     tolayer3 (A, sendpkt);
 
     /* start timer if first packet in window */
-    if (windowcount == 1)
+    if (windowcount == 1) {
       starttimer(A,RTT);
+      timer_seq = sendpkt.seqnum;
+    }
 
     /* get next sequence number, wrap back to 0 */
     A_nextseqnum = (A_nextseqnum + 1) % SEQSPACE;  
