@@ -186,19 +186,45 @@ void A_input(struct pkt packet)
 /* called when A's timer goes off */
 void A_timerinterrupt(void)
 {
-  int i;
+  int i, found = 0;
+  int next_timeout_idx = -1;
 
   if (TRACE > 0)
-    printf("----A: time out,resend packets!\n");
+    printf("----A: timeout, resend packet %d\n", timer_seq);
 
-  for(i=0; i<windowcount; i++) {
+  /* find the packet our timer is for and resend it */
+  for (i = 0; i < windowcount; i++) {
+    int pos = (windowfirst + i) % WINDOWSIZE;
 
-    if (TRACE > 0)
-      printf ("---A: resending packet %d\n", (buffer[(windowfirst+i) % WINDOWSIZE]).seqnum);
+    /* if this is the packet we're timing and it's not acknowledged */
+    if (A_buffer[pos].packet.seqnum == timer_seq && !A_buffer[pos].acked) {
+      /* resend the packet */
+      tolayer3(A, A_buffer[pos].packet);
+      packets_resent++;
+      found = 1;
 
-    tolayer3(A,buffer[(windowfirst+i) % WINDOWSIZE]);
-    packets_resent++;
-    if (i==0) starttimer(A,RTT);
+      /* restart the timer for this packet */
+      starttimer(A, RTT);
+      break;
+    }
+  }
+
+  /* if we didn't find the timed packet (it might have been acknowledged),
+     find the next unacknowledged packet */
+  if (!found) {
+    for (i = 0; i < windowcount; i++) {
+      int pos = (windowfirst + i) % WINDOWSIZE;
+      if (!A_buffer[pos].acked) {
+        next_timeout_idx = pos;
+        break;
+      }
+    }
+
+    /* if we found another unacknowledged packet, set the timer for it */
+    if (next_timeout_idx != -1) {
+      timer_seq = A_buffer[next_timeout_idx].packet.seqnum;
+      starttimer(A, RTT);
+    }
   }
 }
 
