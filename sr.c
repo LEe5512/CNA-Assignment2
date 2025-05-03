@@ -193,14 +193,20 @@ void A_timerinterrupt(void)
 /* entity A routines are called. You can use it to do any initialization */
 void A_init(void)
 {
+  int i;
   /* initialise A's window, buffer and sequence number */
   A_nextseqnum = 0;  /* A starts with seq num 0, do not change this */
   windowfirst = 0;
   windowlast = -1;   /* windowlast is where the last packet sent is stored.  
-		     new packets are placed in winlast + 1 
+		     new packets  are placed in winlast + 1
 		     so initially this is set to -1
 		   */
   windowcount = 0;
+  timer_seq = -1; /* because no packet is timed at beginning */
+  /* initialize buffer */
+  for (i = 0; i < WINDOWSIZE; i++) {
+      A_buffer[i].acked = 0;
+  }
 }
 
 
@@ -266,8 +272,16 @@ void B_input(struct pkt packet)
 /* entity B routines are called. You can use it to do any initialization */
 void B_init(void)
 {
-  expectedseqnum = 0;
+  int i;
+
+  /* initialize reciever window */
+  B_windowfirst = 0;
   B_nextseqnum = 1;
+
+  /* initialize reciever buffer */
+  for (i = 0; i < WINDOWSIZE; i++) {
+      B_buffer[i].recieved = 0;
+  }
 }
 
 /******************************************************************************
