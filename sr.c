@@ -267,46 +267,65 @@ static int B_nextseqnum;             /* the sequence number for the next packets
 void B_input(struct pkt packet)
 {
   struct pkt sendpkt;
-  int i;
+  int i, seqnum, offset;
 
-  /* if not corrupted and received packet is in order */
-  if  ( (!IsCorrupted(packet))  && (packet.seqnum == expectedseqnum) ) {
+  seqnum = packet.seqnum;
+
+  /* if the packet is not corrupted */
+  if (!IsCorrupted(packet)) {
+    /* calculate offset from the beginning of the receive window */
+    offset = (seqnum - B_windowfirst + SEQSPACE) % SEQSPACE;
+
+    /* check if the packet is within the receive window range */
+    if (offset < WINDOWSIZE) {
+      if (TRACE > 0)
+        printf("----B: packet %d is correctly received\n", seqnum);
+
+      /* store the packet */
+      B_buffer[offset].packet = packet;
+      B_buffer[offset].received = 1;
+
+      /* if this is the leftmost packet in the window, try to deliver to upper layer */
+      while (B_buffer[0].received) {
+        /* deliver to application layer */
+        tolayer5(B, B_buffer[0].packet.payload);
+        packets_received++;
+
+        /* slide the window */
+        for (i = 0; i < WINDOWSIZE - 1; i++) {
+          B_buffer[i] = B_buffer[i + 1];
+        }
+
+        /* clear the rightmost position in the window */
+        B_buffer[WINDOWSIZE - 1].received = 0;
+
+        /* update the first sequence number of the window */
+        B_windowfirst = (B_windowfirst + 1) % SEQSPACE;
+      }
+    }
+
+    /* send ACK regardless of whether the packet is in-window or not */
+    sendpkt.acknum = seqnum;
+    sendpkt.seqnum = B_nextseqnum;
+    B_nextseqnum = (B_nextseqnum + 1) % 2;
+
+    /* fill payload with zeros */
+    for (i = 0; i < 20; i++)
+      sendpkt.payload[i] = '0';
+
+    /* compute checksum */
+    sendpkt.checksum = ComputeChecksum(sendpkt);
+
     if (TRACE > 0)
-      printf("----B: packet %d is correctly received, send ACK!\n",packet.seqnum);
-    packets_received++;
+      printf("----B: sending ACK %d\n", sendpkt.acknum);
 
-    /* deliver to receiving application */
-    tolayer5(B, packet.payload);
-
-    /* send an ACK for the received packet */
-    sendpkt.acknum = expectedseqnum;
-
-    /* update state variables */
-    expectedseqnum = (expectedseqnum + 1) % SEQSPACE;
+    /* send the ACK packet */
+    tolayer3(B, sendpkt);
   }
   else {
-    /* packet is corrupted or out of order resend last ACK */
     if (TRACE > 0)
-      printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
-    if (expectedseqnum == 0)
-      sendpkt.acknum = SEQSPACE - 1;
-    else
-      sendpkt.acknum = expectedseqnum - 1;
+      printf("----B: corrupted packet is received, do nothing!\n");
   }
-
-  /* create packet */
-  sendpkt.seqnum = B_nextseqnum;
-  B_nextseqnum = (B_nextseqnum + 1) % 2;
-
-  /* we don't have any data to send.  fill payload with 0's */
-  for ( i=0; i<20 ; i++ )
-    sendpkt.payload[i] = '0';
-
-  /* computer checksum */
-  sendpkt.checksum = ComputeChecksum(sendpkt);
-
-  /* send out packet */
-  tolayer3 (B, sendpkt);
 }
 
 /* the following routine will be called once (only) before any other */
