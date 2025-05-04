@@ -196,8 +196,6 @@ void A_timerinterrupt(void)
     if (A_buffer[pos].packet.seqnum == timer_seq && !A_buffer[pos].acked) {
       /* resend the packet */
       tolayer3(A, A_buffer[pos].packet);
-      if (TRACE > 0)
-        printf("---A: resending packet %d\n", A_buffer[pos].packet.seqnum);
       packets_resent++;
       found = 1;
 
@@ -288,7 +286,6 @@ void B_input(struct pkt packet)
       while (B_buffer[0].received) {
         /* deliver to application layer */
         tolayer5(B, B_buffer[0].packet.payload);
-        packets_received++;
 
         /* slide the window */
         for (i = 0; i < WINDOWSIZE - 1; i++) {
