@@ -196,6 +196,8 @@ void A_timerinterrupt(void)
     if (A_buffer[pos].packet.seqnum == timer_seq && !A_buffer[pos].acked) {
       /* resend the packet */
       tolayer3(A, A_buffer[pos].packet);
+      if (TRACE > 0)
+        printf("---A: resending packet %d\n", A_buffer[pos].packet.seqnum);
       packets_resent++;
       found = 1;
 
@@ -276,6 +278,7 @@ void B_input(struct pkt packet)
     if (offset < WINDOWSIZE) {
       if (TRACE > 0)
         printf("----B: packet %d is correctly received, send ACK!\n", seqnum);
+        packets_received++;
 
       /* store the packet */
       B_buffer[offset].packet = packet;
