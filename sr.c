@@ -235,44 +235,28 @@ void B_input(struct pkt packet)
           }
         }
       }
-
-      /* Send ACK for this correctly received in-window packet */
-      sendpkt.acknum = seq;
-      sendpkt.seqnum = B_nextseqnum;
-      B_nextseqnum = (B_nextseqnum + 1) % 2;
-
-      for (i = 0; i < 20; i++)
-        sendpkt.payload[i] = '0';
-
-      sendpkt.checksum = ComputeChecksum(sendpkt);
-      tolayer3(B, sendpkt);
-    }
-    else {
-      /* Packet is out of window but not corrupted */
+    } else {
       if (TRACE > 0)
-        printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
-
-      /* For out-of-window packets, send ACK for the last correctly received packet */
-      int last_expected = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
-      sendpkt.acknum = last_expected;
-      sendpkt.seqnum = B_nextseqnum;
-      B_nextseqnum = (B_nextseqnum + 1) % 2;
-
-      for (i = 0; i < 20; i++)
-        sendpkt.payload[i] = '0';
-
-      sendpkt.checksum = ComputeChecksum(sendpkt);
-      tolayer3(B, sendpkt);
+        printf("----B: packet %d is correctly received, send ACK!\n", seq);
     }
-  }
-  else {
-    /* Packet is corrupted */
+
+    /* Always send ACK for correctly received packet */
+    sendpkt.acknum = seq;
+    sendpkt.seqnum = B_nextseqnum;
+    B_nextseqnum = (B_nextseqnum + 1) % 2;
+
+    for (i = 0; i < 20; i++)
+      sendpkt.payload[i] = '0';
+
+    sendpkt.checksum = ComputeChecksum(sendpkt);
+    tolayer3(B, sendpkt);
+  } else {
     if (TRACE > 0)
       printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
 
-    /* For corrupted packets, send ACK for the last correctly received packet */
-    int last_expected = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
-    sendpkt.acknum = last_expected;
+    /* Send ACK for the last correctly received packet */
+    /* We'll just send an ACK with an invalid acknum for corrupted packets */
+    sendpkt.acknum = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
     sendpkt.seqnum = B_nextseqnum;
     B_nextseqnum = (B_nextseqnum + 1) % 2;
 
