@@ -213,59 +213,58 @@ void B_input(struct pkt packet)
   }
 
   /* if packet is not corrupted */
-  if (!IsCorrupted(packet)) {
-    packets_received++;
+if (!IsCorrupted(packet)) {
+  packets_received++;
 
-    if (in_window) {
-      if (TRACE > 0)
-        printf("----B: packet %d is correctly received, send ACK!\n", seq);
+  if (in_window) {
+    if (TRACE > 0)
+      printf("----B: packet %d is correctly received, send ACK!\n", seq);
 
-      /* If not already received */
-      if (!received[seq]) {
-        /* Store packet */
-        recv_buffer[seq] = packet;
-        received[seq] = true;
+    /* If not already received */
+    if (!received[seq]) {
+      /* Store packet */
+      recv_buffer[seq] = packet;
+      received[seq] = true;
 
-        /* If this is the expected packet, deliver consecutive packets */
-        if (seq == expected_base) {
-          while (received[expected_base]) {
-            tolayer5(B, recv_buffer[expected_base].payload);
-            received[expected_base] = false;
-            expected_base = (expected_base + 1) % SEQSPACE;
-          }
+      /* If this is the expected packet, deliver consecutive packets */
+      if (seq == expected_base) {
+        while (received[expected_base]) {
+          tolayer5(B, recv_buffer[expected_base].payload);
+          received[expected_base] = false;
+          expected_base = (expected_base + 1) % SEQSPACE;
         }
       }
-    } else {
-      if (TRACE > 0)
-        printf("----B: packet %d is correctly received, send ACK!\n", seq);
     }
-
-    /* Always send ACK for correctly received packet */
-    sendpkt.acknum = seq;
-    sendpkt.seqnum = B_nextseqnum;
-    B_nextseqnum = (B_nextseqnum + 1) % 2;
-
-    for (i = 0; i < 20; i++)
-      sendpkt.payload[i] = '0';
-
-    sendpkt.checksum = ComputeChecksum(sendpkt);
-    tolayer3(B, sendpkt);
   } else {
     if (TRACE > 0)
-      printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
-
-    /* Send ACK for the last correctly received packet */
-    /* We'll just send an ACK with an invalid acknum for corrupted packets */
-    sendpkt.acknum = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
-    sendpkt.seqnum = B_nextseqnum;
-    B_nextseqnum = (B_nextseqnum + 1) % 2;
-
-    for (i = 0; i < 20; i++)
-      sendpkt.payload[i] = '0';
-
-    sendpkt.checksum = ComputeChecksum(sendpkt);
-    tolayer3(B, sendpkt);
+      printf("----B: packet %d is correctly received, send ACK!\n", seq);
   }
+
+  /* Always send ACK for correctly received packet */
+  sendpkt.acknum = seq;
+  sendpkt.seqnum = B_nextseqnum;
+  B_nextseqnum = (B_nextseqnum + 1) % 2;
+
+  for (i = 0; i < 20; i++)
+    sendpkt.payload[i] = '0';
+
+  sendpkt.checksum = ComputeChecksum(sendpkt);
+  tolayer3(B, sendpkt);
+} else {
+  if (TRACE > 0)
+    printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
+
+  /* Send ACK for the last correctly received packet */
+  /* We'll just send an ACK with an invalid acknum for corrupted packets */
+  sendpkt.acknum = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
+  sendpkt.seqnum = B_nextseqnum;
+  B_nextseqnum = (B_nextseqnum + 1) % 2;
+
+  for (i = 0; i < 20; i++)
+    sendpkt.payload[i] = '0';
+
+  sendpkt.checksum = ComputeChecksum(sendpkt);
+  tolayer3(B, sendpkt);
 }
 
 /* the following routine will be called once (only) before any other */
