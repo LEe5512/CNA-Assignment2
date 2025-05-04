@@ -155,15 +155,18 @@ void A_input(struct pkt packet)
 /* called when A's timer goes off */
 void A_timerinterrupt(void)
 {
+  int i;
+
   if (TRACE > 0)
     printf("----A: time out,resend packets!\n");
 
-  /* Only retransmit the base packet */
-  if (used[base] && !acked[base]) {
-    if (TRACE > 0)
-      printf("---A: resending packet %d\n", buffer[base].seqnum);
-    tolayer3(A, buffer[base]);
-    packets_resent++;
+  for (i = base; i != nextseqnum; i = (i + 1) % SEQSPACE) {
+    if (used[i] && !acked[i]) {
+      if (TRACE > 0)
+        printf("---A: resending packet %d\n", buffer[i].seqnum);
+      tolayer3(A, buffer[i]);
+      packets_resent++;
+    }
   }
 
   /* Always restart timer */
