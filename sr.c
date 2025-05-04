@@ -195,6 +195,8 @@ void A_timerinterrupt(void)
     /* if this is the packet we're timing and it's not acknowledged */
     if (A_buffer[pos].packet.seqnum == timer_seq && !A_buffer[pos].acked) {
       /* resend the packet */
+      if (TRACE > 0)
+        printf("---A: resending packet %d\n", A_buffer[pos].packet.seqnum);
       tolayer3(A, A_buffer[pos].packet);
       packets_resent++;
       found = 1;
@@ -274,9 +276,10 @@ void B_input(struct pkt packet)
 
     /* check if the packet is within the receive window range */
     if (offset < WINDOWSIZE) {
-      if (TRACE > 0)
+      if (TRACE > 0) {
         printf("----B: packet %d is correctly received, send ACK!\n", seqnum);
         packets_received++;
+      }
 
       /* store the packet */
       B_buffer[offset].packet = packet;
