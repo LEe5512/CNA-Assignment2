@@ -276,6 +276,7 @@ void B_input(struct pkt packet)
 
     /* check if the packet is within the receive window range */
     if (offset < WINDOWSIZE) {
+      packets_received++;
       if (TRACE > 0) {
         printf("----B: packet %d is correctly received, send ACK!\n", seqnum);
         packets_received++;
